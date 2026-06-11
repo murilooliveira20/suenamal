@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUENA MAL · Control de Producción v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+:root {
+  --void:#0a0612;--void2:#120a1f;--panel:#1a1029;--panel2:#221537;
+  --line:#3a2456;--ember:#ff5a3c;--ember2:#ff7a45;
+  --plasma:#6c4bd6;--plasma2:#a98bff;--signal:#3ce0c0;
+  --text:#e8e0f5;--dim:#9888b5;--faint:#5d4d78;
+  --warn:#ffd23c;--ok:#4ee08a;--danger:#ff4466;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Space Mono',monospace;background:var(--void);color:var(--text);min-height:100vh;overflow-x:hidden;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(108,75,214,.18),transparent),radial-gradient(circle at 85% 90%,rgba(255,90,60,.08),transparent 40%);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.4;
+  background-image:radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.5),transparent),radial-gradient(1px 1px at 60% 70%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 80% 20%,rgba(255,255,255,.45),transparent),radial-gradient(1px 1px at 35% 85%,rgba(255,255,255,.3),transparent);}
+.wrap{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:0 20px 80px;}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:20px 0 18px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.brand{display:flex;align-items:center;gap:14px;}
+.brand-mark{font-family:'Orbitron',sans-serif;font-weight:900;font-size:24px;color:var(--ember);text-shadow:0 0 18px rgba(255,90,60,.45);transform:rotate(-2deg);line-height:.95;}
+.brand-mark small{display:block;font-size:9px;color:var(--plasma2);letter-spacing:4px;transform:rotate(2deg);margin-top:2px;}
+.hdr-actions{display:flex;gap:7px;flex-wrap:wrap;}
+
+/* BUTTONS */
+.btn{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:9px 13px;cursor:pointer;transition:all .18s;}
+.btn:hover{border-color:var(--plasma2);background:var(--panel);}
+.btn-ember{background:linear-gradient(135deg,var(--ember),var(--ember2));border:none;color:#fff;box-shadow:0 4px 14px rgba(255,90,60,.3);}
+.btn-ember:hover{box-shadow:0 4px 22px rgba(255,90,60,.5);}
+.btn-signal{background:linear-gradient(135deg,var(--signal),#2ab8a0);border:none;color:var(--void);font-weight:900;}
+.btn-plasma{background:linear-gradient(135deg,var(--plasma),var(--plasma2));border:none;color:#fff;}
+.btn-sm{padding:5px 9px;font-size:10px;}
+.btn-xs{padding:4px 7px;font-size:9px;}
+input[type=file]{display:none;}
+
+/* TABS */
+nav.tabs{display:flex;gap:3px;margin-bottom:20px;flex-wrap:wrap;}
+.tab{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;background:transparent;color:var(--dim);border:1px solid transparent;border-radius:8px;padding:10px 16px;cursor:pointer;transition:all .18s;}
+.tab:hover{color:var(--text);border-color:var(--line);}
+.tab.active{color:var(--void);background:var(--signal);box-shadow:0 0 16px rgba(60,224,192,.4);font-weight:700;}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:24px;}
+.stat{background:linear-gradient(160deg,var(--panel),var(--void2));border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+.stat::after{content:'';position:absolute;top:-50%;right:-20%;width:80px;height:200%;background:linear-gradient(var(--plasma),transparent);opacity:.06;transform:rotate(25deg);}
+.stat .num{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;line-height:1;}
+.stat .lbl{font-size:9px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;}
+.stat.ember .num{color:var(--ember2);}
+.stat.signal .num{color:var(--signal);}
+.stat.plasma .num{color:var(--plasma2);}
+.stat.warn .num{color:var(--warn);}
+.stat.ok .num{color:var(--ok);}
+
+/* VIEW */
+.view{display:none;}
+.view.active{display:block;animation:fade .25s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* FILTER BAR */
+.fbar{display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.chip{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:var(--panel);color:var(--dim);border:1px solid var(--line);border-radius:16px;padding:5px 11px;cursor:pointer;transition:all .15s;}
+.chip:hover{color:var(--text);border-color:var(--plasma);}
+.chip.on{background:var(--plasma);color:#fff;border-color:var(--plasma);box-shadow:0 0 10px rgba(108,75,214,.4);}
+.chip.on-ember{background:var(--ember);color:#fff;border-color:var(--ember);}
+.chip.on-signal{background:var(--signal);color:var(--void);border-color:var(--signal);}
+.sbox{flex:1;min-width:180px;max-width:320px;font-family:'Space Mono',monospace;font-size:12px;background:var(--void2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 12px;}
+.sbox:focus{outline:none;border-color:var(--signal);}
+.sbox::placeholder{color:var(--faint);}
+select.sbox{cursor:pointer;}
+
+/* THEORY GRID */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;}
+.tcard{background:linear-gradient(165deg,var(--panel),var(--void2));border:1px solid var(--line);border-radius:14px;padding:16px;transition:all .2s;position:relative;}
+.tcard:hover{border-color:var(--plasma2);transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.5);}
+.tcard .badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;align-items:center;}
+.badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:6px;cursor:pointer;transition:all .12s;}
+.badge:hover{opacity:.8;transform:scale(.97);}
+/* categorias */
+.bc-aliens{background:rgba(60,224,192,.15);color:var(--signal);}
+.bc-conspiracion{background:rgba(255,90,60,.15);color:var(--ember2);}
+.bc-paranormal{background:rgba(169,139,255,.18);color:var(--plasma2);}
+.bc-tecnologia{background:rgba(60,160,224,.15);color:#5ab8ff;}
+.bc-politica{background:rgba(255,210,60,.13);color:var(--warn);}
+.bc-salud{background:rgba(60,224,120,.13);color:var(--ok);}
+.bc-historia{background:rgba(200,140,90,.15);color:#e0a060;}
+.bc-otro{background:rgba(150,136,181,.13);color:var(--dim);}
+/* estados */
+.bs-pendiente{background:rgba(169,139,255,.18);color:var(--plasma2);}
+.bs-cumplida{background:rgba(78,224,138,.15);color:var(--ok);}
+.bs-descartada{background:rgba(255,68,102,.15);color:var(--danger);}
+.bs-evolucionado{background:rgba(255,210,60,.13);color:var(--warn);}
+/* tipo */
+.bt-clip{background:var(--ember);color:#fff;}
+.bt-pred{background:rgba(255,210,60,.2);color:var(--warn);}
+.bt-ep{background:rgba(108,75,214,.2);color:var(--plasma2);font-size:8px;}
+.tcard h3{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.3;}
+.tcard p{font-size:11px;color:var(--dim);line-height:1.65;margin-bottom:8px;}
+.pred-box{background:rgba(255,210,60,.08);border-left:2px solid var(--warn);padding:6px 9px;margin:6px 0 8px;font-size:11px;color:var(--warn);border-radius:4px;}
+.tcard-meta{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--faint);border-top:1px solid var(--line);padding-top:9px;margin-top:4px;}
+.tcard-meta .ts{font-family:'Orbitron',sans-serif;color:var(--signal);}
+.tcard-actions{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
+
+/* EPISODIOS */
+.eplist{display:flex;flex-direction:column;gap:10px;}
+.eprow{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;transition:all .18s;}
+.eprow:hover{border-color:var(--signal);}
+.eprow-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px;}
+.eprow h3{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--text);}
+.eprow .cnt{font-size:10px;color:var(--faint);white-space:nowrap;}
+.eprow .res{font-size:11px;color:var(--dim);line-height:1.6;margin-bottom:8px;}
+.tema-tag{font-size:9px;background:var(--void2);color:var(--plasma2);padding:2px 7px;border-radius:10px;display:inline-block;margin:2px;}
+.ep-txts{margin-top:10px;border-top:1px solid var(--line);padding-top:10px;}
+.ep-txt-item{font-size:11px;color:var(--dim);padding:6px 10px;background:var(--void2);border-radius:6px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;}
+.ep-txt-preview{font-size:10px;color:var(--faint);margin-top:6px;line-height:1.6;max-height:80px;overflow:hidden;}
+
+/* SEGUIMIENTO con investigación */
+.seg-layout{display:grid;grid-template-columns:1fr 320px;gap:16px;}
+@media(max-width:960px){.seg-layout{grid-template-columns:1fr;}}
+.inv-panel{background:var(--panel);border:1px solid var(--plasma);border-radius:14px;padding:18px;height:fit-content;position:sticky;top:20px;}
+.inv-panel h4{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--signal);margin-bottom:14px;letter-spacing:1px;text-transform:uppercase;}
+.inv-panel .teoria-sel{font-size:12px;color:var(--text);margin-bottom:12px;padding:10px;background:var(--void2);border-radius:8px;border-left:3px solid var(--ember);}
+.inv-panel .teoria-sel h5{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--ember2);margin-bottom:4px;}
+.inv-panel .teoria-sel p{font-size:10px;color:var(--dim);line-height:1.5;}
+.search-links{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;}
+.sl-btn{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid var(--line);background:var(--void2);color:var(--dim);transition:all .15s;text-decoration:none;display:block;text-align:center;}
+.sl-btn:hover{color:var(--text);border-color:var(--plasma2);}
+.sl-google{border-color:rgba(66,133,244,.4);color:#4285f4;}
+.sl-reddit{border-color:rgba(255,69,0,.4);color:#ff4500;}
+.sl-youtube{border-color:rgba(255,0,0,.4);color:#ff0000;}
+.sl-twitter{border-color:rgba(29,161,242,.4);color:#1da1f2;}
+.sl-ddg{border-color:rgba(222,88,23,.4);color:#de5817;}
+.sl-conspira{border-color:rgba(169,139,255,.4);color:var(--plasma2);}
+.inv-notes{width:100%;font-family:'Space Mono',monospace;font-size:11px;background:var(--void2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px;min-height:120px;resize:vertical;line-height:1.65;margin-bottom:10px;}
+.inv-notes:focus{outline:none;border-color:var(--signal);}
+.inv-notas-saved{font-size:10px;color:var(--ok);margin-bottom:8px;display:none;}
+.inv-notas-saved.show{display:block;}
+
+/* CLIPS MEJORADO */
+.clip-layout{display:grid;grid-template-columns:1fr 260px;gap:16px;}
+@media(max-width:900px){.clip-layout{grid-template-columns:1fr;}}
+.clip-sidebar{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;height:fit-content;position:sticky;top:20px;}
+.clip-sidebar h4{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--signal);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;}
+.cstat{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:11px;}
+.cstat:last-child{border-bottom:none;}
+.cstat .cn{font-family:'Orbitron',sans-serif;font-size:18px;}
+.clip-card{background:linear-gradient(165deg,var(--panel),var(--void2));border:1px solid var(--line);border-radius:14px;padding:16px;position:relative;transition:all .2s;}
+.clip-card:hover{border-color:var(--ember2);transform:translateY(-2px);}
+.clip-card h3{font-family:'Orbitron',sans-serif;font-size:13px;margin:8px 0 6px;}
+.clip-card .cdesc{font-size:11px;color:var(--dim);line-height:1.7;margin-bottom:8px;}
+.clip-card .cpred{font-size:11px;color:var(--warn);background:rgba(255,210,60,.08);border-left:2px solid var(--warn);padding:6px 8px;border-radius:4px;margin-bottom:8px;}
+.clip-dur{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.clip-dur label{font-size:10px;color:var(--dim);}
+.clip-dur input{font-family:'Space Mono',monospace;font-size:11px;background:var(--void2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;width:80px;}
+.clip-dur input:focus{outline:none;border-color:var(--signal);}
+.clip-status{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;}
+.cs{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:5px 9px;border-radius:7px;cursor:pointer;border:1px solid;transition:all .12s;}
+.cs-sin{background:rgba(169,139,255,.1);color:var(--plasma2);border-color:rgba(169,139,255,.3);}
+.cs-sin.on{background:var(--plasma);color:#fff;border-color:var(--plasma);}
+.cs-edit{background:rgba(255,210,60,.1);color:var(--warn);border-color:rgba(255,210,60,.3);}
+.cs-edit.on{background:var(--warn);color:var(--void);border-color:var(--warn);}
+.cs-pub{background:rgba(78,224,138,.1);color:var(--ok);border-color:rgba(78,224,138,.3);}
+.cs-pub.on{background:var(--ok);color:var(--void);border-color:var(--ok);}
+.cs-desc2{background:rgba(255,68,102,.1);color:var(--danger);border-color:rgba(255,68,102,.3);}
+.cs-desc2.on{background:var(--danger);color:#fff;border-color:var(--danger);}
+
+/* PLANIFICADOR */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.plan-grid{grid-template-columns:1fr;}}
+.plan-col{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;}
+.plan-col h4{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:1px;color:var(--signal);margin-bottom:14px;text-transform:uppercase;}
+.ep-card{background:var(--void2);border:1px solid var(--line);border-radius:10px;padding:13px;margin-bottom:9px;transition:all .15s;}
+.ep-card:hover{border-color:var(--plasma2);}
+.ep-num{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--ember2);margin-bottom:5px;}
+.ep-tit{font-size:12px;color:var(--text);margin-bottom:6px;}
+.ep-fecha{font-size:10px;color:var(--faint);}
+
+/* BUSCAR */
+.buscar-layout{display:grid;grid-template-columns:1fr 280px;gap:16px;}
+@media(max-width:800px){.buscar-layout{grid-template-columns:1fr;}}
+.result-hit{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:9px;transition:all .18s;}
+.result-hit:hover{border-color:var(--plasma2);}
+.r-ep{font-size:10px;color:var(--plasma2);margin-bottom:5px;font-family:'Orbitron',sans-serif;}
+.r-ctx{font-size:11px;color:var(--dim);line-height:1.7;}
+.r-ctx mark{background:rgba(255,210,60,.22);color:var(--warn);border-radius:3px;padding:0 2px;}
+.r-ts{font-size:10px;color:var(--signal);margin-top:6px;font-family:'Orbitron',sans-serif;}
+.txt-panel2{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;}
+.txt-panel2 h4{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--signal);margin-bottom:10px;letter-spacing:1px;}
+.txt-drop{font-family:'Space Mono',monospace;font-size:10px;background:var(--void2);color:var(--dim);border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px;}
+.txt-drop:hover{border-color:var(--signal);color:var(--text);}
+.txt-li{font-size:10px;padding:6px 9px;border-radius:6px;background:var(--void2);margin-bottom:4px;color:var(--dim);}
+
+/* GUION */
+.guion-layout{display:grid;grid-template-columns:240px 1fr;gap:16px;}
+@media(max-width:900px){.guion-layout{grid-template-columns:1fr;}}
+.guion-side{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;height:fit-content;position:sticky;top:20px;}
+.guion-side h4{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:1px;color:var(--signal);margin-bottom:10px;text-transform:uppercase;}
+.glist{display:flex;flex-direction:column;gap:4px;max-height:360px;overflow-y:auto;}
+.gitem{font-size:11px;padding:8px 10px;border-radius:7px;background:var(--void2);cursor:pointer;transition:all .14s;display:flex;justify-content:space-between;align-items:center;gap:6px;}
+.gitem:hover{background:var(--panel2);}
+.gitem.active{background:var(--plasma);color:#fff;}
+.gitem .gdel{color:var(--ember);opacity:.5;cursor:pointer;}
+.gitem .gdel:hover{opacity:1;}
+.guion-main{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;}
+.gtitle{width:100%;font-family:'Orbitron',sans-serif;font-size:19px;font-weight:700;background:transparent;border:none;color:var(--text);border-bottom:2px solid var(--line);padding-bottom:8px;margin-bottom:16px;}
+.gtitle:focus{outline:none;border-color:var(--ember);}
+.ai-bar{background:linear-gradient(135deg,rgba(108,75,214,.12),rgba(60,224,192,.07));border:1px solid var(--plasma);border-radius:10px;padding:12px;margin-bottom:14px;}
+.ai-bar p{font-size:11px;color:var(--dim);margin-bottom:9px;line-height:1.6;}
+.ai-row{display:flex;gap:7px;}
+.ai-key{font-family:'Space Mono',monospace;font-size:11px;background:var(--void2);color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 11px;flex:1;}
+.ai-key:focus{outline:none;border-color:var(--signal);}
+.ai-loading{font-size:11px;color:var(--signal);display:none;margin-top:8px;}
+.ai-loading.show{display:block;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.seg-block{background:var(--void2);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:9px;}
+.seg-head{display:flex;gap:7px;margin-bottom:7px;align-items:center;}
+.seg-type{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;background:var(--panel2);color:var(--plasma2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;}
+.seg-time{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--signal);background:transparent;border:1px solid var(--line);border-radius:6px;padding:5px 8px;width:74px;}
+.seg-type:focus,.seg-time:focus{outline:none;border-color:var(--signal);}
+.seg-block textarea{width:100%;font-family:'Space Mono',monospace;font-size:11px;line-height:1.7;background:transparent;color:var(--text);border:none;resize:vertical;min-height:52px;}
+.seg-block textarea:focus{outline:none;}
+.seg-del{float:right;background:transparent;border:none;color:var(--ember);cursor:pointer;font-size:12px;opacity:.5;}
+.seg-del:hover{opacity:1;}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(10,6,18,.88);z-index:200;align-items:center;justify-content:center;}
+.modal-bg.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--plasma);border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;}
+.modal h3{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--text);margin-bottom:14px;}
+.modal-actions{display:flex;gap:7px;margin-top:16px;justify-content:flex-end;}
+.form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.form-label{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+.form-input{font-family:'Space Mono',monospace;font-size:12px;background:var(--void2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 11px;width:100%;}
+.form-input:focus{outline:none;border-color:var(--signal);}
+.tema-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;max-height:120px;overflow-y:auto;}
+.tchip{font-size:9px;background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:10px;padding:3px 9px;cursor:pointer;transition:all .12s;}
+.tchip.on{background:var(--plasma);color:#fff;border-color:var(--plasma);}
+
+/* MISC */
+.empty{text-align:center;padding:60px 20px;color:var(--faint);}
+.empty .big{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--dim);margin-bottom:9px;}
+.hint{font-size:10px;color:var(--faint);}
+.row-gap{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+.divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--signal);color:var(--void);padding:10px 20px;border-radius:8px;font-weight:700;font-size:11px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">SUENA<small>MAL</small></div>
+    <div>
+      <div style="font-family:'Orbitron';font-size:12px;letter-spacing:1px;">CONTROL DE PRODUCCIÓN <span style="color:var(--signal);font-size:9px;">v3</span></div>
+      <div style="font-size:10px;color:var(--dim);">biblia · investigación · planificador · guiones · clips</div>
+    </div>
+  </div>
+  <div class="hdr-actions">
+    <label class="btn">📂 BIBLIA<input type="file" id="fileInput" accept=".json"></label>
+    <label class="btn">📄 TXTS<input type="file" id="txtInput" accept=".txt" multiple></label>
+    <button class="btn btn-ember" id="exportBtn">⬇ EXPORTAR</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-view="teorias">⊹ Teorías</button>
+  <button class="tab" data-view="seguimiento">◎ Seguimiento</button>
+  <button class="tab" data-view="episodios">◉ Episodios</button>
+  <button class="tab" data-view="planificador">📅 Plan</button>
+  <button class="tab" data-view="buscar">🔍 Buscar</button>
+  <button class="tab" data-view="clips">✂ Clips</button>
+  <button class="tab" data-view="guion">✎ Guiones</button>
+</nav>
+
+<div class="stats" id="statsBar"></div>
+
+<!-- ===== TEORÍAS ===== -->
+<div class="view active" id="view-teorias">
+  <div class="fbar" id="catChips"></div>
+  <div class="fbar" id="epChips" style="margin-top:-8px;"></div>
+  <div class="fbar">
+    <input class="sbox" id="searchT" placeholder="Buscar teoría, tema, predicción...">
+    <button class="chip" id="filterClip" data-active="0">✂ SOLO CLIPS</button>
+    <button class="chip" id="filterPred" data-active="0">⚡ SOLO PREDICCIONES</button>
+  </div>
+  <div class="tgrid" id="theoryGrid"></div>
+</div>
+
+<!-- ===== SEGUIMIENTO ===== -->
+<div class="view" id="view-seguimiento">
+  <div class="seg-layout">
+    <div>
+      <div class="fbar">
+        <button class="chip on" data-sf="todas">todas</button>
+        <button class="chip on-ember" data-sf="seguidas">◎ seguidas</button>
+        <button class="chip" data-sf="pendiente">pendiente</button>
+        <button class="chip" data-sf="cumplida">✓ cumplida</button>
+        <button class="chip" data-sf="evolucionado">↗ evolucionó</button>
+        <button class="chip" data-sf="descartada">✗ descartada</button>
+      </div>
+      <div class="tgrid" id="seguimientoGrid"></div>
+    </div>
+    <div class="inv-panel">
+      <h4>🔍 Investigar teoría</h4>
+      <div id="invSelected"><p class="hint">Clickeá "Investigar" en cualquier teoría para ver las opciones acá.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EPISODIOS ===== -->
+<div class="view" id="view-episodios">
+  <div class="eplist" id="epList"></div>
+</div>
+
+<!-- ===== PLANIFICADOR ===== -->
+<div class="view" id="view-planificador">
+  <div class="row-gap">
+    <button class="btn btn-ember" id="newEpBtn">+ NUEVO EPISODIO</button>
+  </div>
+  <div class="plan-grid">
+    <div id="planList"></div>
+    <div class="plan-col">
+      <h4>Temas sin asignar</h4>
+      <div id="temasDisp"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BUSCAR ===== -->
+<div class="view" id="view-buscar">
+  <div class="fbar">
+    <input class="sbox" id="searchFull" placeholder="Buscar en transcripciones..." style="max-width:420px;">
+    <button class="btn btn-signal" id="doSearch">BUSCAR</button>
+    <span class="hint" id="txtCount"></span>
+  </div>
+  <div id="searchResults"><div class="empty"><div class="big">Buscador full text</div><div class="hint">Cargá transcripciones (botón TXTS arriba o desde cada episodio) y buscá cualquier frase exacta.</div></div></div>
+</div>
+
+<!-- ===== CLIPS ===== -->
+<div class="view" id="view-clips">
+  <div class="clip-layout">
+    <div>
+      <div class="fbar">
+        <button class="chip on" data-cf="todos">todos</button>
+        <button class="chip" data-cf="sin clipear">sin clipear</button>
+        <button class="chip" data-cf="en edicion">en edición</button>
+        <button class="chip" data-cf="publicado">publicado</button>
+        <button class="chip" data-cf="descartado">descartado</button>
+        <button class="chip" data-cf="pred">solo predicciones</button>
+      </div>
+      <div class="tgrid" id="clipGrid"></div>
+    </div>
+    <div class="clip-sidebar">
+      <h4>Estado de clips</h4>
+      <div id="clipStats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== GUIONES ===== -->
+<div class="view" id="view-guion">
+  <div class="guion-layout">
+    <div class="guion-side">
+      <h4>Guiones</h4>
+      <button class="btn btn-ember" style="width:100%;margin-bottom:10px;" id="newGuion">+ NUEVO</button>
+      <div class="glist" id="guionList"></div>
+    </div>
+    <div class="guion-main" id="guionMain">
+      <div class="empty"><div class="big">Sin guion seleccionado</div><div class="hint">Creá uno o elegí de la lista.</div></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- MODAL EPISODIO PLAN -->
+<div class="modal-bg" id="epModal">
+  <div class="modal">
+    <h3>Planificar episodio</h3>
+    <div class="form-row"><label class="form-label">Código</label><input class="form-input" id="epNum" placeholder="EP.5x01"></div>
+    <div class="form-row"><label class="form-label">Título</label><input class="form-input" id="epTit" placeholder="Los alienígenas del Chaco"></div>
+    <div class="form-row"><label class="form-label">Fecha</label><input class="form-input" type="date" id="epFecha"></div>
+    <div class="form-row"><label class="form-label">Temas</label><div class="tema-chips" id="temaChips"></div></div>
+    <div class="form-row"><label class="form-label">Notas</label><textarea class="form-input" id="epNotas" rows="3"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn" id="epCancel">Cancelar</button>
+      <button class="btn btn-signal" id="epSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== ESTADO =====
+let biblia={}, txts={}, guiones=lsGet('sm_g',[]), plan=lsGet('sm_plan',[]);
+let clipE=lsGet('sm_clips',{}), teoriaE=lsGet('sm_estados',{}), invNotas=lsGet('sm_inv',{});
+let epTxts=lsGet('sm_eptxts',{}); // epid -> texto transcripcion
+let epMeta=lsGet('sm_epmeta',{}); // epid -> {temporada, numero}
+let seguir=lsGet('sm_seguir',{}); // ids marcados para seguimiento destacado
+let guionActivo=null, filtCat='todas', filtEp='todas', filtSF='todas', filtCF='todos';
+let filterClipOn=false, filterPredOn=false, editandoEp=null, invActivaId=null;
+const TIPOS=['INTRO','BLOQUE','TEORÍA','INVITADO','CORTE','CIERRE','NOTA'];
+const ESTADOS=['pendiente','cumplida','evolucionado','descartada'];
+const CLIP_ST=['sin clipear','en edicion','publicado','descartado'];
+
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function lsSet(k,v){localStorage.setItem(k,JSON.stringify(v));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2100);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function empty(b,h){return `<div class="empty" style="grid-column:1/-1"><div class="big">${b}</div><div class="hint">${h}</div></div>`;}
+function tId(t){return t.episodio+'__'+t.titulo;}
+
+// ===== CARGA BIBLIA =====
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{
+    const d=JSON.parse(ev.target.result);
+    if(d.biblia){biblia=d.biblia;if(d.guiones)guiones=d.guiones;if(d.plan)plan=d.plan;if(d.clipE)clipE=d.clipE;if(d.teoriaE)teoriaE=d.teoriaE;if(d.invNotas)invNotas=d.invNotas;if(d.epMeta)epMeta=d.epMeta;if(d.seguir)seguir=d.seguir;if(d.epTxts)epTxts=d.epTxts;}
+    else biblia=d;
+    lsSet('sm_biblia',biblia);lsSet('sm_g',guiones);
+    render();toast('Biblia: '+Object.keys(biblia).length+' episodios');
+  }catch(e){toast('Error: JSON inválido');}};
+  r.readAsText(f);
+});
+
+// CARGA TXTS
+function loadTxts(files){
+  [...files].forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{txts[f.name]=ev.target.result;renderTxtList();};
+    r.readAsText(f);
+  });
+  toast([...files].length+' txt cargados');
+}
+document.getElementById('txtInput').addEventListener('change',e=>loadTxts(e.target.files));
+
+try{const s=localStorage.getItem('sm_biblia');if(s)biblia=JSON.parse(s);}catch(e){}
+
+// ===== TABS =====
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-'+tab.dataset.view).classList.add('active');
+  });
+});
+
+// ===== DATOS =====
+function allT(){const o=[];for(const[ep,d]of Object.entries(biblia))(d.teorias||[]).forEach(t=>o.push({...t,episodio:ep}));return o;}
+function cats(){const s=new Set();allT().forEach(t=>s.add(t.categoria||'otro'));return['todas',...Array.from(s).sort()];}
+function eps(){return Object.keys(biblia).sort();}
+
+// ===== RENDER =====
+function render(){renderStats();renderCatChips();renderEpChips();renderTeorias();renderSeg();renderEpisodios();renderPlan();renderTxtList();renderClips();renderGuionList();}
+
+function renderStats(){
+  const t=allT(),pub=Object.values(clipE).filter(s=>s==='publicado').length,cum=Object.values(teoriaE).filter(s=>s==='cumplida').length;
+  document.getElementById('statsBar').innerHTML=`
+    <div class="stat"><div class="num">${Object.keys(biblia).length}</div><div class="lbl">Episodios</div></div>
+    <div class="stat plasma"><div class="num">${t.length}</div><div class="lbl">Teorías</div></div>
+    <div class="stat warn"><div class="num">${t.filter(x=>x.prediccion).length}</div><div class="lbl">Predicciones</div></div>
+    <div class="stat ember"><div class="num">${t.filter(x=>x.potencial_clip).length}</div><div class="lbl">Para clipear</div></div>
+    <div class="stat ok"><div class="num">${pub}</div><div class="lbl">Clips pub.</div></div>
+    <div class="stat signal"><div class="num">${cum}</div><div class="lbl">Cumplidas</div></div>
+    <div class="stat"><div class="num">${guiones.length}</div><div class="lbl">Guiones</div></div>
+    <div class="stat"><div class="num">${plan.length}</div><div class="lbl">Planificados</div></div>`;
+}
+
+// ===== FILTROS HOME =====
+function renderCatChips(){
+  document.getElementById('catChips').innerHTML=cats().map(c=>
+    `<button class="chip ${c===filtCat?'on':''}" data-cat="${c}">${c}</button>`).join('');
+  document.querySelectorAll('[data-cat]').forEach(ch=>ch.addEventListener('click',()=>{filtCat=ch.dataset.cat;renderCatChips();renderTeorias();}));
+}
+function renderEpChips(){
+  const epList=['todas',...eps()];
+  document.getElementById('epChips').innerHTML='<span style="font-size:10px;color:var(--faint);align-self:center;">EP:</span>'+epList.map(e=>
+    `<button class="chip ${e===filtEp?'on-ember on':''}" style="font-size:9px;" data-ep="${e}">${e==='todas'?'todos':e}</button>`).join('');
+  document.querySelectorAll('[data-ep]').forEach(ch=>ch.addEventListener('click',()=>{filtEp=ch.dataset.ep;renderEpChips();renderTeorias();}));
+}
+document.getElementById('filterClip').addEventListener('click',function(){
+  filterClipOn=!filterClipOn;this.classList.toggle('on',filterClipOn);renderTeorias();});
+document.getElementById('filterPred').addEventListener('click',function(){
+  filterPredOn=!filterPredOn;this.classList.toggle('on',filterPredOn);renderTeorias();});
+document.getElementById('searchT').addEventListener('input',renderTeorias);
+
+// ===== TEORÍAS =====
+function tCard(t,showInv=false){
+  const cat=t.categoria||'otro',id=tId(t),est=teoriaE[id]||'pendiente';
+  return `<div class="tcard">
+    <div class="badges">
+      <span class="badge bc-${cat}" onclick="setCatFilter('${cat}')">${cat}</span>
+      <span class="badge bs-${est}" onclick="cycleEstado('${id}')">${est}</span>
+      ${t.potencial_clip?`<span class="badge bt-clip" onclick="setFilterClip()">✂ CLIP</span>`:''}
+      ${t.prediccion?`<span class="badge bt-pred" onclick="setFilterPred()">⚡ PRED</span>`:''}
+      <span class="badge bt-ep" onclick="setEpFilter('${t.episodio}')">${esc(t.episodio)}</span>
+    </div>
+    <h3>${esc(t.titulo)}</h3>
+    <p>${esc(t.descripcion||'')}</p>
+    ${t.prediccion?`<div class="pred-box">⚡ ${esc(t.prediccion)}</div>`:''}
+    <div class="tcard-meta"><span></span><span class="ts">${esc(t.timestamp||'--:--')}</span></div>
+    <div class="tcard-actions" style="align-items:center;">
+      <select class="seg-type" style="font-size:9px;padding:4px 6px;" onchange="setEstadoDirect('${id}',this.value)">
+        ${ESTADOS.map(s=>`<option value="${s}" ${est===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      <button class="btn btn-xs" onclick='addToGuion(${JSON.stringify(JSON.stringify(t))})'>→ GUION</button>
+      <button class="btn btn-xs ${seguir[id]?'btn-ember':'btn-plasma'}" onclick="marcarSeguimiento('${id}')">${seguir[id]?'◎ SIGUIENDO':'◎ SEGUIR'}</button>
+      ${showInv?`<button class="btn btn-xs btn-plasma" onclick='abrirInv("${id}")'>🔍 INVESTIGAR</button>`:''}
+    </div>
+  </div>`;
+}
+
+function renderTeorias(){
+  const q=(document.getElementById('searchT').value||'').toLowerCase();
+  let lista=allT();
+  if(filtCat!=='todas')lista=lista.filter(t=>(t.categoria||'otro')===filtCat);
+  if(filtEp!=='todas')lista=lista.filter(t=>t.episodio===filtEp);
+  if(filterClipOn)lista=lista.filter(t=>t.potencial_clip);
+  if(filterPredOn)lista=lista.filter(t=>t.prediccion);
+  if(q)lista=lista.filter(t=>(t.titulo+t.descripcion+(t.prediccion||'')+t.episodio).toLowerCase().includes(q));
+  const g=document.getElementById('theoryGrid');
+  g.innerHTML=lista.length?lista.map(t=>tCard(t,false)).join(''):empty('Sin teorías','Ajustá los filtros o cargá la biblia.');
+}
+
+function setCatFilter(c){filtCat=c;renderCatChips();renderTeorias();document.querySelector('[data-view="teorias"]').click();}
+function setEpFilter(e){filtEp=e;renderEpChips();renderTeorias();document.querySelector('[data-view="teorias"]').click();}
+function setFilterClip(){filterClipOn=true;document.getElementById('filterClip').classList.add('on');renderTeorias();document.querySelector('[data-view="teorias"]').click();}
+function setFilterPred(){filterPredOn=true;document.getElementById('filterPred').classList.add('on');renderTeorias();document.querySelector('[data-view="teorias"]').click();}
+
+// ===== SEGUIMIENTO + INVESTIGACIÓN =====
+document.querySelectorAll('[data-sf]').forEach(ch=>ch.addEventListener('click',()=>{
+  filtSF=ch.dataset.sf;document.querySelectorAll('[data-sf]').forEach(c=>c.classList.remove('on'));ch.classList.add('on');renderSeg();
+}));
+
+function renderSeg(){
+  let lista=allT();
+  if(filtSF==='seguidas')lista=lista.filter(t=>seguir[tId(t)]);
+  else if(filtSF!=='todas')lista=lista.filter(t=>(teoriaE[tId(t)]||'pendiente')===filtSF);
+  // ordenar: las marcadas para seguimiento primero
+  lista.sort((a,b)=>(seguir[tId(b)]?1:0)-(seguir[tId(a)]?1:0));
+  const g=document.getElementById('seguimientoGrid');
+  if(!lista.length){g.innerHTML=empty(filtSF==='seguidas'?'Sin teorías seguidas':'Sin teorías en este estado',filtSF==='seguidas'?'Marcá teorías con ◎ SEGUIR desde la página principal.':'');return;}
+  g.innerHTML=lista.map(t=>{
+    const card=tCard(t,true);
+    if(seguir[tId(t)]) return card.replace('<div class="tcard">','<div class="tcard" style="border-color:var(--ember);box-shadow:0 0 0 1px var(--ember);">');
+    return card;
+  }).join('');
+}
+
+function cycleEstado(id){
+  const i=ESTADOS.indexOf(teoriaE[id]||'pendiente');
+  teoriaE[id]=ESTADOS[(i+1)%ESTADOS.length];
+  lsSet('sm_estados',teoriaE);render();toast('Estado: '+teoriaE[id]);
+}
+function setEstadoDirect(id,v){
+  teoriaE[id]=v;lsSet('sm_estados',teoriaE);
+  renderStats();renderSeg();
+  // actualizar el badge de estado en la card sin re-render completo
+  renderTeorias();toast('Estado: '+v);
+}
+function marcarSeguimiento(id){
+  if(seguir[id]){
+    delete seguir[id];lsSet('sm_seguir',seguir);
+    render();toast('Quitada del seguimiento');
+  }else{
+    teoriaE[id]=teoriaE[id]||'pendiente';
+    seguir[id]=true;lsSet('sm_seguir',seguir);
+    lsSet('sm_estados',teoriaE);
+    render();toast('Marcada para seguimiento ◎');
+  }
+}
+
+function abrirInv(id){
+  invActivaId=id;
+  const t=allT().find(x=>tId(x)===id);if(!t)return;
+  const q=encodeURIComponent(t.titulo+' '+( t.descripcion||'').slice(0,60));
+  const qc=encodeURIComponent(t.titulo+' conspiracy theory evidence reddit');
+  const notas=invNotas[id]||'';
+  document.getElementById('invSelected').innerHTML=`
+    <div class="teoria-sel"><h5>${esc(t.titulo)}</h5><p>${esc((t.descripcion||'').slice(0,120))}${(t.descripcion||'').length>120?'…':''}</p></div>
+    <div class="search-links">
+      <a class="sl-btn sl-google" href="https://google.com/search?q=${q}" target="_blank">🔍 Google</a>
+      <a class="sl-btn sl-reddit" href="https://reddit.com/search/?q=${q}" target="_blank">Reddit</a>
+      <a class="sl-btn sl-youtube" href="https://youtube.com/results?search_query=${q}" target="_blank">YouTube</a>
+      <a class="sl-btn sl-twitter" href="https://twitter.com/search?q=${q}" target="_blank">Twitter/X</a>
+      <a class="sl-btn sl-ddg" href="https://duckduckgo.com/?q=${q}" target="_blank">DuckDuckGo</a>
+      <a class="sl-btn sl-conspira" href="https://duckduckgo.com/?q=${qc}" target="_blank">🛸 Conspira</a>
+    </div>
+    <p class="form-label" style="margin-bottom:6px;">Notas de investigación</p>
+    <textarea class="inv-notes" id="invNotes" placeholder="Pegá acá lo que encontraste — fuentes, links, resumen del estado actual, qué dicen los conspiranoicos hoy...">${esc(notas)}</textarea>
+    <div class="inv-notas-saved" id="invSaved">✓ Guardado</div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-signal" style="flex:1;" onclick="guardarInv()">GUARDAR NOTAS</button>
+      <button class="btn btn-ember" style="flex:1;" onclick="invAGuion()">→ GUION</button>
+    </div>`;
+}
+
+function guardarInv(){
+  if(!invActivaId)return;
+  invNotas[invActivaId]=document.getElementById('invNotes').value;
+  lsSet('sm_inv',invNotas);
+  const s=document.getElementById('invSaved');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1500);
+}
+
+function invAGuion(){
+  guardarInv();
+  const t=allT().find(x=>tId(x)===invActivaId);if(!t)return;
+  const notas=invNotas[invActivaId]||'';
+  if(!guiones.length){const g={id:uid(),titulo:'Nuevo guion',segmentos:[]};guiones.push(g);guionActivo=g.id;}
+  if(!guionActivo)guionActivo=guiones[0].id;
+  const g=guiones.find(x=>x.id===guionActivo);
+  g.segmentos.push({tipo:'TEORÍA',tiempo:t.timestamp||'',texto:`[${t.episodio}] ${t.titulo}\nOriginal: ${(t.descripcion||'').slice(0,200)}\n\n--- UPDATE ---\n${notas}`});
+  lsSet('sm_g',guiones);toast('Agregado al guion con update');renderGuionList();renderStats();
+  document.querySelector('[data-view="guion"]').click();renderGuionMain();
+}
+
+// ===== EPISODIOS =====
+function renderEpisodios(){
+  const list=document.getElementById('epList');
+  const epArr=Object.entries(biblia);
+  if(!epArr.length){list.innerHTML=empty('Sin episodios','Cargá tu biblia.json.');return;}
+  list.innerHTML=epArr.map(([ep,d])=>{
+    const txtKey='ep__'+ep;
+    const hasTxt=!!epTxts[txtKey];
+    const meta=epMeta[ep]||{};
+    return `<div class="eprow">
+      <div class="eprow-head">
+        <h3>${esc(ep)}</h3>
+        <span class="cnt">${(d.teorias||[]).length} teorías · ${(d.momentos_oro||[]).length} momentos</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+        <span class="hint">Temporada:</span>
+        <input class="seg-time" style="width:60px;" type="text" value="${esc(meta.temporada||'')}" placeholder="T1" onchange="setEpMeta('${ep}','temporada',this.value)">
+        <span class="hint">Episodio N°:</span>
+        <input class="seg-time" style="width:60px;" type="text" value="${esc(meta.numero||'')}" placeholder="01" onchange="setEpMeta('${ep}','numero',this.value)">
+        ${meta.temporada||meta.numero?`<span class="badge bt-ep">${esc(meta.temporada||'')}${meta.numero?'x'+esc(meta.numero):''}</span>`:''}
+      </div>
+      <div class="res">${esc(d.resumen||'')}</div>
+      <div>${(d.temas||[]).map(t=>`<span class="tema-tag">${esc(t)}</span>`).join('')}</div>
+      <div class="ep-txts">
+        <div style="display:flex;gap:7px;align-items:center;">
+          <label class="btn btn-sm" style="cursor:pointer;">
+            ${hasTxt?'↻ CAMBIAR TXT':'📄 CARGAR TRANSCRIPCIÓN'}
+            <input type="file" accept=".txt" onchange="cargarEpTxt('${ep}',this)">
+          </label>
+          ${hasTxt?`<button class="btn btn-sm btn-signal" onclick="toggleTxt('${ep}')">VER TXT</button><span class="hint">✓ Transcripción cargada</span>`:''}
+        </div>
+        ${hasTxt?`<div id="preview_${ep.replace(/[^a-z0-9]/gi,'_')}" style="display:none;" class="ep-txt-preview">${esc((epTxts[txtKey]||'').slice(0,400))}...</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cargarEpTxt(ep,input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{epTxts['ep__'+ep]=ev.target.result;lsSet('sm_eptxts',epTxts);renderEpisodios();renderTxtList();toast('Transcripción cargada para: '+ep);};
+  r.readAsText(f);
+}
+function setEpMeta(ep,campo,valor){
+  if(!epMeta[ep])epMeta[ep]={};
+  epMeta[ep][campo]=valor;
+  lsSet('sm_epmeta',epMeta);
+  renderEpisodios();
+}
+
+function toggleTxt(ep){
+  const id='preview_'+ep.replace(/[^a-z0-9]/gi,'_');
+  const el=document.getElementById(id);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
+// ===== PLANIFICADOR =====
+document.getElementById('newEpBtn').addEventListener('click',()=>{editandoEp=null;abrirModalEp();});
+document.getElementById('epCancel').addEventListener('click',()=>document.getElementById('epModal').classList.remove('show'));
+document.getElementById('epSave').addEventListener('click',saveEp);
+
+function abrirModalEp(ep=null){
+  editandoEp=ep;
+  document.getElementById('epNum').value=ep?.num||'';
+  document.getElementById('epTit').value=ep?.titulo||'';
+  document.getElementById('epFecha').value=ep?.fecha||'';
+  document.getElementById('epNotas').value=ep?.notas||'';
+  const temas=[...new Set(allT().map(t=>t.categoria||'otro').concat(Object.values(biblia).flatMap(d=>d.temas||[])))].sort();
+  document.getElementById('temaChips').innerHTML=temas.map(t=>`<span class="tchip ${(ep?.temas||[]).includes(t)?'on':''}" data-t="${esc(t)}">${esc(t)}</span>`).join('');
+  document.querySelectorAll('#temaChips .tchip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+  document.getElementById('epModal').classList.add('show');
+}
+window.abrirModalEp=abrirModalEp;
+
+function saveEp(){
+  const temas=[...document.querySelectorAll('#temaChips .tchip.on')].map(c=>c.dataset.t);
+  const d={id:editandoEp?.id||uid(),num:document.getElementById('epNum').value,titulo:document.getElementById('epTit').value,fecha:document.getElementById('epFecha').value,notas:document.getElementById('epNotas').value,temas};
+  if(editandoEp){const i=plan.findIndex(e=>e.id===editandoEp.id);if(i>-1)plan[i]=d;}else plan.push(d);
+  lsSet('sm_plan',plan);document.getElementById('epModal').classList.remove('show');renderPlan();renderStats();toast('Episodio guardado');
+}
+
+function renderPlan(){
+  const list=document.getElementById('planList');
+  if(!plan.length){list.innerHTML=`<div class="empty"><div class="big">Sin episodios</div><div class="hint">Creá el primero.</div></div>`;return;}
+  list.innerHTML=plan.map(ep=>`
+    <div class="ep-card">
+      <div class="ep-num">${esc(ep.num||'S/N')}</div>
+      <div class="ep-tit">${esc(ep.titulo||'Sin título')}</div>
+      <div class="ep-fecha">📅 ${ep.fecha||'Sin fecha'}</div>
+      ${(ep.temas||[]).length?`<div style="margin-top:6px;">${ep.temas.map(t=>`<span class="tema-tag">${esc(t)}</span>`).join('')}</div>`:''}
+      ${ep.notas?`<p style="font-size:10px;color:var(--dim);margin-top:6px;">${esc(ep.notas)}</p>`:''}
+      <div style="display:flex;gap:5px;margin-top:9px;">
+        <button class="btn btn-xs" onclick='abrirModalEp(${JSON.stringify(ep).replace(/'/g,"&#39;")})'>✎</button>
+        <button class="btn btn-xs" onclick="delEp('${ep.id}')">✕</button>
+        <button class="btn btn-xs btn-signal" onclick="epAGuion('${ep.id}')">→ GUION</button>
+      </div>
+    </div>`).join('');
+  const usados=plan.flatMap(e=>e.temas||[]);
+  const libres=[...new Set(Object.values(biblia).flatMap(d=>d.temas||[]))].filter(t=>!usados.includes(t));
+  document.getElementById('temasDisp').innerHTML=libres.length?libres.map(t=>`<span class="tema-tag" style="cursor:pointer;">${esc(t)}</span>`).join(' '):'<p class="hint">Todos asignados.</p>';
+}
+
+function delEp(id){if(!confirm('¿Borrar?'))return;plan=plan.filter(e=>e.id!==id);lsSet('sm_plan',plan);renderPlan();renderStats();}
+function epAGuion(id){
+  const ep=plan.find(e=>e.id===id);if(!ep)return;
+  const g={id:uid(),titulo:(ep.num?ep.num+' · ':'')+ep.titulo,segmentos:[{tipo:'INTRO',tiempo:'00:00',texto:''},...(ep.temas||[]).map(t=>({tipo:'BLOQUE',tiempo:'',texto:'Tema: '+t})),{tipo:'CIERRE',tiempo:'',texto:''}]};
+  guiones.push(g);guionActivo=g.id;lsSet('sm_g',guiones);
+  document.querySelector('[data-view="guion"]').click();renderGuionList();renderGuionMain();renderStats();toast('Guion creado');
+}
+
+// ===== BUSCAR =====
+function renderTxtList(){
+  const total=Object.keys(txts).length+Object.keys(epTxts).length;
+  const el=document.getElementById('txtCount');
+  if(el)el.textContent=total?total+' transcripciones disponibles':'Sin transcripciones cargadas';
+}
+document.getElementById('doSearch').addEventListener('click',buscar);
+document.getElementById('searchFull').addEventListener('keydown',e=>{if(e.key==='Enter')buscar();});
+
+function buscar(){
+  const q=document.getElementById('searchFull').value.trim().toLowerCase();
+  const res=document.getElementById('searchResults');
+  if(!q){res.innerHTML=empty('Escribí algo','');return;}
+  const allTxts={...txts};
+  Object.entries(epTxts).forEach(([k,v])=>allTxts['[EP] '+k.replace('ep__','')]=v);
+  if(!Object.keys(allTxts).length){res.innerHTML=empty('Sin transcripciones','Cargá los .txt.');return;}
+  const hits=[];
+  for(const[nom,txt]of Object.entries(allTxts)){
+    const lines=txt.split('\n');
+    lines.forEach((line,i)=>{
+      if(line.toLowerCase().includes(q)){
+        const ctx=[lines[i-1]||'',line,lines[i+1]||''].join(' ');
+        const ts=line.match(/^\[(\d{2}:\d{2}(?::\d{2})?)\]/)?.[1]||'';
+        hits.push({nom,ctx,ts});
+      }
+    });
+  }
+  if(!hits.length){res.innerHTML=empty('Sin resultados','Probá con otras palabras.');return;}
+  const re=new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+  res.innerHTML=`<p class="hint" style="margin-bottom:10px;">${hits.length} resultado${hits.length!==1?'s':''}</p>`
+    +hits.slice(0,80).map(h=>`<div class="result-hit"><div class="r-ep">${esc(h.nom)}</div><div class="r-ctx">${esc(h.ctx).replace(re,m=>`<mark>${m}</mark>`)}</div>${h.ts?`<div class="r-ts">${h.ts}</div>`:''}</div>`).join('');
+}
+
+// ===== CLIPS =====
+document.querySelectorAll('[data-cf]').forEach(ch=>ch.addEventListener('click',()=>{
+  filtCF=ch.dataset.cf;document.querySelectorAll('[data-cf]').forEach(c=>c.classList.remove('on'));ch.classList.add('on');renderClips();
+}));
+
+function renderClips(){
+  let lista=allT().filter(t=>t.potencial_clip);
+  if(filtCF==='pred')lista=lista.filter(t=>t.prediccion);
+  else if(filtCF!=='todos')lista=lista.filter(t=>(clipE[tId(t)]||'sin clipear')===filtCF);
+  const g=document.getElementById('clipGrid');
+  g.innerHTML=lista.length?lista.map(t=>{
+    const id=tId(t),est=clipE[id]||'sin clipear';
+    const dur=clipE[id+'_dur']||'00:30';
+    return `<div class="clip-card">
+      <div class="badges">
+        <span class="badge bc-${t.categoria||'otro'}">${t.categoria||'otro'}</span>
+        ${t.prediccion?`<span class="badge bt-pred">⚡ PREDICCIÓN</span>`:`<span class="badge bc-otro">TEORÍA</span>`}
+        <span class="badge bt-ep">${esc(t.episodio)}</span>
+      </div>
+      <h3>${esc(t.titulo)}</h3>
+      <div class="cdesc">${esc(t.descripcion||'')}</div>
+      ${t.prediccion?`<div class="cpred">⚡ ${esc(t.prediccion)}</div>`:''}
+      ${(t.descripcion||'').length>0&&(biblia[t.episodio]?.resumen)?`<div style="font-size:10px;color:var(--faint);margin-bottom:8px;">Ep: ${esc((biblia[t.episodio]?.resumen||'').slice(0,80))}…</div>`:''}
+      <div class="clip-dur">
+        <label>Duración estimada:</label>
+        <input type="text" value="${dur}" placeholder="00:30" onchange="setClipDur('${id}',this.value)">
+        <span class="hint">~30s sugerido</span>
+      </div>
+      <div class="tcard-meta"><span></span><span class="ts">${esc(t.timestamp||'')}</span></div>
+      <div class="clip-status">
+        ${CLIP_ST.map(s=>`<button class="cs cs-${s.replace(' ','')} ${est===s?'on':''}" onclick="setClipE('${id}','${s}')">${s}</button>`).join('')}
+      </div>
+    </div>`;
+  }).join(''):empty('Sin clips en este estado','');
+
+  const todos=allT().filter(t=>t.potencial_clip);
+  document.getElementById('clipStats').innerHTML=CLIP_ST.map(s=>{
+    const n=todos.filter(t=>(clipE[tId(t)]||'sin clipear')===s).length;
+    const color=s==='publicado'?'var(--ok)':s==='en edicion'?'var(--warn)':s==='descartado'?'var(--danger)':'var(--dim)';
+    return `<div class="cstat"><span>${s}</span><span class="cn" style="color:${color}">${n}</span></div>`;
+  }).join('')+`<div class="cstat"><span style="color:var(--plasma2)">pred. clipeables</span><span class="cn" style="color:var(--plasma2)">${todos.filter(t=>t.prediccion).length}</span></div>`;
+}
+
+function setClipE(id,s){clipE[id]=s;lsSet('sm_clips',clipE);renderClips();renderStats();toast('Clip: '+s);}
+function setClipDur(id,v){clipE[id+'_dur']=v;lsSet('sm_clips',clipE);}
+
+// ===== GUIONES =====
+function renderGuionList(){
+  const list=document.getElementById('guionList');
+  if(!guiones.length){list.innerHTML='<div class="hint">No hay guiones.</div>';return;}
+  list.innerHTML=guiones.map(g=>`
+    <div class="gitem ${g.id===guionActivo?'active':''}" data-id="${g.id}">
+      <span>${esc(g.titulo||'Sin título')}</span>
+      <span class="gdel" data-del="${g.id}">✕</span>
+    </div>`).join('');
+  list.querySelectorAll('.gitem').forEach(item=>item.addEventListener('click',e=>{
+    if(e.target.dataset.del){delGuion(e.target.dataset.del);return;}
+    guionActivo=item.dataset.id;renderGuionList();renderGuionMain();
+  }));
+}
+
+function renderGuionMain(){
+  const main=document.getElementById('guionMain');
+  const g=guiones.find(x=>x.id===guionActivo);
+  if(!g){main.innerHTML=`<div class="empty"><div class="big">Sin guion</div></div>`;return;}
+  main.innerHTML=`
+    <input class="gtitle" value="${esc(g.titulo)}" id="gTitle" placeholder="Título del episodio...">
+    <div class="ai-bar">
+      <p>✦ IA — Generá la estructura del guion con Claude basándose en las teorías de la biblia.</p>
+      <div class="ai-row">
+        <input class="ai-key" id="aiKey" type="password" placeholder="sk-ant-api03-..." value="${sessionStorage.getItem('sm_aik')||''}">
+        <button class="btn btn-signal btn-sm" onclick="genIA()">⚡ GENERAR</button>
+      </div>
+      <div class="ai-loading" id="aiLoad">Generando con Claude...</div>
+    </div>
+    <div class="row-gap"><button class="btn" onclick="addSeg()">+ SEGMENTO</button></div>
+    <div id="segs">${g.segmentos.map((s,i)=>segHTML(s,i)).join('')}</div>`;
+  document.getElementById('gTitle').addEventListener('input',e=>{g.titulo=e.target.value;lsSet('sm_g',guiones);renderGuionList();renderStats();});
+  document.getElementById('aiKey').addEventListener('input',e=>sessionStorage.setItem('sm_aik',e.target.value));
+  bindSegs(g);
+}
+
+function segHTML(s,i){
+  return `<div class="seg-block" data-i="${i}">
+    <button class="seg-del" data-del="${i}">✕</button>
+    <div class="seg-head">
+      <select class="seg-type" data-f="tipo">${TIPOS.map(t=>`<option ${t===s.tipo?'selected':''}>${t}</option>`).join('')}</select>
+      <input class="seg-time" data-f="tiempo" value="${esc(s.tiempo||'')}" placeholder="00:00">
+    </div>
+    <textarea data-f="texto" placeholder="Contenido, notas, referencias...">${esc(s.texto||'')}</textarea>
+  </div>`;
+}
+
+function bindSegs(g){
+  document.querySelectorAll('#segs .seg-block').forEach(seg=>{
+    const i=+seg.dataset.i;
+    seg.querySelectorAll('[data-f]').forEach(el=>{
+      el.addEventListener('input',()=>{g.segmentos[i][el.dataset.f]=el.value;lsSet('sm_g',guiones);});
+      el.addEventListener('change',()=>{g.segmentos[i][el.dataset.f]=el.value;lsSet('sm_g',guiones);});
+    });
+    seg.querySelector('[data-del]').addEventListener('click',()=>{g.segmentos.splice(i,1);lsSet('sm_g',guiones);renderGuionMain();});
+  });
+}
+
+function addSeg(){const g=guiones.find(x=>x.id===guionActivo);g.segmentos.push({tipo:'BLOQUE',tiempo:'',texto:''});lsSet('sm_g',guiones);renderGuionMain();}
+
+async function genIA(){
+  const g=guiones.find(x=>x.id===guionActivo);if(!g)return;
+  const key=document.getElementById('aiKey').value.trim();
+  if(!key){toast('Poné tu API key');return;}
+  const load=document.getElementById('aiLoad');load.classList.add('show');
+  const tlist=allT().slice(0,15).map(t=>`- ${t.titulo} (${t.episodio}): ${(t.descripcion||'').slice(0,80)}`).join('\n');
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:`Sos productor de SUENA MAL, podcast paraguayo escéptico y divertido sobre teorías y conspiración, conducido por Murilo y Walter.\n\nGuion: "${g.titulo}"\nSegmentos actuales: ${g.segmentos.map(s=>s.tipo+': '+s.texto?.slice(0,60)).join(' | ')}\nTeorias disponibles:\n${tlist}\n\nGenerá guion completo. Devolvé SOLO JSON sin markdown:\n{"titulo":"...","segmentos":[{"tipo":"INTRO","tiempo":"00:00","texto":"..."}]}\nTipos: ${TIPOS.join(', ')}. Incluí INTRO, 3-5 BLOQUEs con referencias a teorías reales, CORTEs y CIERRE. Español rioplatense.`}]})});
+    const data=await r.json();
+    const txt=data.content?.[0]?.text?.replace(/```json|```/g,'').trim();
+    const p=JSON.parse(txt);
+    if(p.segmentos){g.segmentos=p.segmentos;if(p.titulo&&g.titulo==='Nuevo guion')g.titulo=p.titulo;lsSet('sm_g',guiones);renderGuionMain();renderGuionList();toast('Guion generado ✦');}
+  }catch(e){toast('Error: '+e.message);}
+  finally{load.classList.remove('show');}
+}
+
+document.getElementById('newGuion').addEventListener('click',()=>{
+  const g={id:uid(),titulo:'Nuevo guion',segmentos:[{tipo:'INTRO',tiempo:'00:00',texto:''}]};
+  guiones.push(g);guionActivo=g.id;lsSet('sm_g',guiones);
+  renderGuionList();renderGuionMain();renderStats();
+  document.querySelector('[data-view="guion"]').click();
+});
+
+function delGuion(id){
+  if(!confirm('¿Borrar guion?'))return;
+  guiones=guiones.filter(g=>g.id!==id);
+  if(guionActivo===id)guionActivo=null;
+  lsSet('sm_g',guiones);renderGuionList();renderGuionMain();renderStats();
+}
+
+function addToGuion(tStr){
+  const t=JSON.parse(tStr);
+  if(!guiones.length){const g={id:uid(),titulo:'Nuevo guion',segmentos:[]};guiones.push(g);guionActivo=g.id;}
+  if(!guionActivo)guionActivo=guiones[0].id;
+  const g=guiones.find(x=>x.id===guionActivo);
+  const inv=invNotas[tId(t)]||'';
+  g.segmentos.push({tipo:'TEORÍA',tiempo:t.timestamp||'',texto:`[${t.episodio}] ${t.titulo}\n${t.descripcion||''}${t.prediccion?'\n⚡ Predicción: '+t.prediccion:''}${inv?'\n\n--- UPDATE INVESTIGACIÓN ---\n'+inv:''}`});
+  lsSet('sm_g',guiones);toast('Agregado al guion');renderGuionList();renderStats();
+}
+
+// ===== EXPORT =====
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const d={biblia,guiones,plan,clipE,teoriaE,invNotas,epMeta,seguir,epTxts,exportado:new Date().toISOString()};
+  const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='suenamal_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  toast('Backup exportado');
+});
+
+render();
+</script>
+</body>
+</html>
